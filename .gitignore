@@ -6,4 +6,4 @@ glad.c
 
 *.vcxproj
 *.vcxproj.filters
-*.vcxproj.users
+*.vcxproj.user

@@ -1,4 +1,4 @@
 #pragma once
 
 #include "Window/Window.h"
-#include "externalVars.h"
+#include "Graphics/Colors.h"

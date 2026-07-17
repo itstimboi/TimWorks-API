@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "../externalVars.h"
+#include "../Graphics/Colors.h"
 
 #ifdef TIMAPI_EXPORTS
 #define TAPI_API __declspec(dllexport)
@@ -20,6 +20,7 @@ namespace TAPI
 	TAPI_API void PollEvents();
 	TAPI_API void SwapBuffers(Window* window);
 	TAPI_API bool WindowShouldClose(Window* window);
-	TAPI_API void SetClearColor(Color color);
-	TAPI_API void ClearWindow();
+	TAPI_API void SetClearColor(Color color, Window* window);
+	TAPI_API void Clear();
+	TAPI_API bool InitGraphics(Window* window);
 }

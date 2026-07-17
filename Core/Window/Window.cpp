@@ -19,8 +19,6 @@ namespace TAPI
 		int Width = 0;
 		int Height = 0;
 		std::string Title;
-
-		bool ShouldClose = false;
 	};
 
 	bool Init()
@@ -65,37 +63,93 @@ namespace TAPI
 		window->Width = windowWidth;
 		window->Height = windowHeight;
 		window->Title = Title;
-		window->ShouldClose = false;
 
 		glfwMakeContextCurrent(glfwWindow);
 
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-		{
-			std::cout << "Failed to initialize GLAD" << std::endl;
-			glfwDestroyWindow(glfwWindow);
-			delete window;
-			return nullptr;
-		}
+		//if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+		//{
+		//	std::cout << "Failed to initialize GLAD" << std::endl;
+		//	glfwDestroyWindow(glfwWindow);
+		//	delete window;
+		//	return nullptr;
+		//}
 
-		glViewport(0, 0, windowWidth, windowHeight);
+		//glViewport(0, 0, windowWidth, windowHeight);
+
+		//glEnable(GL_DEPTH_TEST);
 
 		return window;
 	}
 	
 	void DestroyWindow(Window* window)
 	{
-		if (window == nullptr)
+		if (!window)
 			return;
 
-		GLFWwindow* glfwWindow = window->Handle;
-
-		glfwDestroyWindow(glfwWindow);
+		if (window->Handle)
+		{
+			glfwDestroyWindow(window->Handle);
+			window->Handle = nullptr;
+		}
 
 		delete window;
 	}
 
 	void SetWindowSizeCallback(Window* window)
 	{
+		if (window == nullptr)
+			return;
+
 		glfwSetFramebufferSizeCallback(window->Handle, framebuffer_size_callback);
+	}
+
+	void PollEvents()
+	{
+		glfwPollEvents();
+	}
+
+	void SwapBuffers(Window* window)
+	{
+		if (window == nullptr)
+			return;
+
+		glfwSwapBuffers(window->Handle);
+	}
+
+	bool WindowShouldClose(Window* window)
+	{
+		if (window == nullptr)
+			return true;
+
+		return glfwWindowShouldClose(window->Handle);
+	}
+
+	void SetClearColor(Color color, Window* window)
+	{
+		if (window == nullptr)
+			return;
+
+		glClearColor(color.r, color.g, color.b, color.a);
+	}
+
+	void Clear()
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+
+	bool InitGraphics(Window* window)
+	{
+		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+		{
+			std::cout << "Failed to initialize GLAD" << std::endl;
+			DestroyWindow(window);
+			return false;
+		}
+
+		glViewport(0, 0, window->Width, window->Height);
+
+		glEnable(GL_DEPTH_TEST);
+
+		return true;
 	}
 }

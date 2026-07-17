@@ -1,3 +1,8 @@
+.vs/
+Debug/
+Release/
+x64/
+x86/
 Build/
 Libraries/
 Release/
@@ -7,3 +12,10 @@ glad.c
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.user
+*.suo

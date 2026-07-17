@@ -15,4 +15,5 @@ namespace TAPI
 	TAPI_API void DeInit();
 	TAPI_API Window* InitWindow(int windowWidth, int windowHeight, const std::string& Title);
 	TAPI_API void DestroyWindow(Window* window);
+	TAPI_API void SetWindowSizeCallback(Window* window);
 }

@@ -5,7 +5,7 @@
 #include "InputState.h"
 #include "Input.h"
 #include "../Window/Window.h"
-#include "InputInternal.h"
+//#include "InputInternal.h"
 
 namespace TAPI
 {
@@ -129,46 +129,89 @@ namespace TAPI
         g_InputStates.erase(window);
     }
 
-    void UpdateKeyboard(TAPI::Window* window)
+    void UpdateInput(Window* window)
     {
         if (window == nullptr)
             return;
 
-        InputState& input = g_InputStates[window];
 
-        for (int i = 0; i < (int)Key::Count; i++)
+        InputState& input =
+            g_InputStates[window];
+
+
+        GLFWwindow* glfwWindow =
+            static_cast<GLFWwindow*>(window->Handle);
+
+
+
+        // Copy old keyboard state
+
+        for (int i = 0; i < 350; i++)
         {
-            input.PreviousKeys[i] = input.Keys[i];
+            input.PreviousKeys[i] =
+                input.Keys[i];
 
-            Key key = static_cast<Key>(i);
 
             input.Keys[i] =
                 glfwGetKey(
-                    static_cast<GLFWwindow*>(window->Handle),
-                    ToGLFWKey(key)
-                ) == GLFW_PRESS;
+                    glfwWindow,
+                    i
+                )
+                == GLFW_PRESS;
         }
-    }
 
-    void UpdateMouse(TAPI::Window* window)
-    {
-        if (window == nullptr)
-            return;
 
-        InputState& input = g_InputStates[window];
 
-        for (int i = 0; i < (int)MouseButton::Count; i++)
+        // Mouse buttons
+
+        for (int i = 0; i < 8; i++)
         {
-            input.PreviousMousePosition = input.MousePosition;
+            input.PreviousMouseButtons[i] =
+                input.MouseButtons[i];
 
-            MouseButton button = static_cast<MouseButton>(i);
 
             input.MouseButtons[i] =
                 glfwGetMouseButton(
-                    static_cast<GLFWwindow*>(window->Handle),
-                    ToGLFWMouseButton(button)
-                ) == GLFW_PRESS;
+                    glfwWindow,
+                    i
+                )
+                == GLFW_PRESS;
         }
+
+
+
+        // Mouse position
+
+        double x;
+        double y;
+
+
+        glfwGetCursorPos(
+            glfwWindow,
+            &x,
+            &y
+        );
+
+
+        input.PreviousMousePosition =
+            input.MousePosition;
+
+
+        input.MousePosition =
+            Vector2(
+                (float)x,
+                (float)y
+            );
+
+
+        input.MouseDelta =
+            Vector2(
+                input.MousePosition.x -
+                input.PreviousMousePosition.x,
+
+                input.MousePosition.y -
+                input.PreviousMousePosition.y
+            );
     }
 
     bool IsKeyDown(Window* window, Key key)
@@ -199,7 +242,59 @@ namespace TAPI
             == GLFW_PRESS;
     }
 
+    bool IsKeyPressed(Window* window, Key key)
+    {
+        InputState& input =
+            g_InputStates[window];
 
+
+        int glfwKey =
+            ToGLFWKey(key);
+
+
+        return
+            input.Keys[glfwKey] &&
+            !input.PreviousKeys[glfwKey];
+    }
+
+    bool IsKeyReleased(Window* window, Key key)
+    {
+        InputState& input =
+            g_InputStates[window];
+
+
+        int glfwKey =
+            ToGLFWKey(key);
+
+
+        return
+            !input.Keys[glfwKey] &&
+            input.PreviousKeys[glfwKey];
+    }
+
+    bool IsMouseButtonReleased(Window* window, MouseButton mouseButton)
+    {
+        InputState& input =
+            g_InputStates[window];
+
+
+        int glfwMouseButton =
+            ToGLFWMouseButton(mouseButton);
+
+
+        return
+            !input.MouseButtons[glfwMouseButton] &&
+            input.PreviousMouseButtons[glfwMouseButton];
+    }
+
+    Vector2 GetMouseDelta(Window* window)
+    {
+        if (window == nullptr)
+            return Vector2();
+
+
+        return g_InputStates[window].MouseDelta;
+    }
 
     Vector2 GetMousePosition(Window* window)
     {
@@ -226,44 +321,42 @@ namespace TAPI
 
 
 
-    Vector2 GetMouseDelta(Window* window)
-    {
-        InputState& input = g_InputStates[window];
+    //Vector2 GetMouseDelta(Window* window)
+    //{
+    //    InputState& input = g_InputStates[window];
 
-        static double lastX = 0;
-        static double lastY = 0;
-
-
-        if (window == nullptr)
-            return Vector2();
+    //    static double lastX = 0;
+    //    static double lastY = 0;
 
 
-        double x;
-        double y;
+    //    if (window == nullptr)
+    //        return Vector2();
 
 
-        glfwGetCursorPos(
-            static_cast<GLFWwindow*>(window->Handle),
-            &x,
-            &y
-        );
+    //    double x;
+    //    double y;
 
 
-        Vector2 delta(
-            (float)(x - lastX),
-            (float)(y - lastY)
-        );
+    //    glfwGetCursorPos(
+    //        static_cast<GLFWwindow*>(window->Handle),
+    //        &x,
+    //        &y
+    //    );
 
 
-        lastX = x;
-        lastY = y;
-
-        input.PreviousMousePosition = Vector2((float)lastX, (float)lastY);
-
-        return delta;
-    }
+    //    Vector2 delta(
+    //        (float)(x - lastX),
+    //        (float)(y - lastY)
+    //    );
 
 
+    //    lastX = x;
+    //    lastY = y;
+
+    //    input.PreviousMousePosition = Vector2((float)lastX, (float)lastY);
+
+    //    return delta;
+    //}
 
     Vector2 GetMouseScroll(Window* window)
     {

@@ -4,6 +4,7 @@
 
 #include "../Input/InputState.h"
 #include "../Input/InputInternal.h"
+#include "../Time/Time.h"
 #include "Window.h"
 
 namespace TAPI
@@ -18,6 +19,36 @@ namespace TAPI
 	static GLFWwindow* GetGLFWWindow(Window* window)
 	{
 		return static_cast<GLFWwindow*>(window->Handle);
+	}
+
+	static double g_LastTime = 0.0;
+	static float g_DeltaTime = 0.0f;
+	static int g_FPS = 0;
+
+	static double fpsTimer = 0.0;
+	static int frameCounter = 0;
+
+	void UpdateTime()
+	{
+		double current = glfwGetTime();
+
+		g_DeltaTime = static_cast<float>(current - g_LastTime);
+		g_LastTime = current;
+
+		frameCounter++;
+		fpsTimer += g_DeltaTime;
+
+		if (fpsTimer >= 1.0)
+		{
+			g_FPS = frameCounter;
+			frameCounter = 0;
+			fpsTimer = 0.0;
+		}
+	}
+
+	std::string GetVersion()
+	{
+		return "0.0.3";
 	}
 
 	bool Init()
@@ -77,6 +108,10 @@ namespace TAPI
 
 		//glEnable(GL_DEPTH_TEST);
 
+		g_LastTime = glfwGetTime();
+		g_DeltaTime = 0.0f;
+		g_FPS = 0;
+
 		CreateInputState(window);
 
 		return window;
@@ -109,6 +144,13 @@ namespace TAPI
 	void PollEvents()
 	{
 		glfwPollEvents();
+
+		UpdateTime();
+
+		//for (auto& [window, state] : g_InputStates)
+		//{
+		//	UpdateInput(window);
+		//}
 	}
 
 	void SwapBuffers(Window* window)
@@ -132,7 +174,7 @@ namespace TAPI
 		glClearColor(color.r, color.g, color.b, color.a);
 	}
 
-	void Clear()
+	void ClearBuffers()
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
@@ -254,18 +296,22 @@ namespace TAPI
 		if (window == nullptr)
 		{
 			std::cout << "Didn't Get Proper References." << std::endl;
-			return { 0, 0 };
+			return Vector2Int();
 		}
 
 		int x;
 		int y;
 
-		glfwGetWindowPos(GetGLFWWindow(window), &x, &y);
+		glfwGetWindowPos(
+			GetGLFWWindow(window),
+			&x,
+			&y
+		);
 
-		window->xPos = x;
-		window->yPos = y;
-
-		return Vector2Int(x, y);
+		return Vector2Int(
+			x,
+			y
+		);
 	}
 
 	void SetWindowPosition(Window* window, int newXPos, int newYPos)
@@ -419,24 +465,18 @@ namespace TAPI
 		glfwFocusWindow(GetGLFWWindow(window));
 	}
 
-	void BeginFrame(Window* window)
+	float GetDeltaTime()
 	{
-		if (window == nullptr)
-			return;
-
-		UpdateKeyboard(window);
-		UpdateMouse(window);
-
-		PollEvents();
+		return g_DeltaTime;
 	}
 
-	void EndFrame(Window* window)
+	float GetTime()
 	{
-		if (window == nullptr)
-		{
-			return;
-		}
+		return static_cast<float>(glfwGetTime());
+	}
 
-		SwapBuffers(window);
+	int GetFPS()
+	{
+		return g_FPS;
 	}
 }

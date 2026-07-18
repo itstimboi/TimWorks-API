@@ -6,16 +6,18 @@ namespace TAPI
 {
     struct InputState
     {
-        bool Keys[(int)Key::Count] = {};
-        bool PreviousKeys[(int)Key::Count] = {};
+        bool Keys[350]{};
+        bool PreviousKeys[350]{};
 
-        bool MouseButtons[(int)MouseButton::Count] = {};
-        bool PreviousMouseButtons[(int)MouseButton::Count] = {};
+
+        bool MouseButtons[8]{};
+        bool PreviousMouseButtons[8]{};
+
 
         Vector2 MousePosition;
         Vector2 PreviousMousePosition;
-        Vector2 MouseDelta;
 
-        Vector2 MouseScroll;
+
+        Vector2 MouseDelta;
     };
 }

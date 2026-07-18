@@ -1,44 +1,45 @@
 #pragma once
 
+#include "../Window/Window.h"
 #include "../Math/Vectors.h"
 #include "InputCodes.h"
 
 namespace TAPI
 {
-    struct Window;
+    //struct Window;
 
     // Keyboard
 
-    bool IsKeyDown(Window*, Key);
-    bool IsKeyPressed(Window*, Key);
-    bool IsKeyReleased(Window*, Key);
+    TAPI_API bool IsKeyDown(Window*, Key);
+    TAPI_API bool IsKeyPressed(Window*, Key);
+    TAPI_API bool IsKeyReleased(Window*, Key);
 
     // Mouse buttons
 
-    bool IsMouseButtonDown(Window*, MouseButton);
-    bool IsMouseButtonPressed(Window*, MouseButton);
-    bool IsMouseButtonReleased(Window*, MouseButton);
+    TAPI_API bool IsMouseButtonDown(Window*, MouseButton);
+    TAPI_API bool IsMouseButtonPressed(Window*, MouseButton);
+    TAPI_API bool IsMouseButtonReleased(Window*, MouseButton);
 
     // Mouse
 
-    Vector2 GetMousePosition(Window*);
-    Vector2 GetMouseDelta(Window*);
-    Vector2 GetMouseScroll(Window*);
+    TAPI_API Vector2 GetMousePosition(Window*);
+    TAPI_API Vector2 GetMouseDelta(Window*);
+    TAPI_API Vector2 GetMouseScroll(Window*);
 
     // Cursor
 
-    void ShowCursor(Window*);
-    void HideCursor(Window*);
-    void LockCursor(Window*);
-    void UnlockCursor(Window*);
+    TAPI_API void ShowCursor(Window*);
+    TAPI_API void HideCursor(Window*);
+    TAPI_API void LockCursor(Window*);
+    TAPI_API void UnlockCursor(Window*);
 
     // Cursor position
 
-    void SetMousePosition(Window*, Vector2);
+    TAPI_API void SetMousePosition(Window*, Vector2);
 
     // Mouse wheel
 
-    Vector2 GetMouseScroll(Window* window);
+    TAPI_API Vector2 GetMouseScroll(Window* window);
 
     // Text input
 

@@ -87,6 +87,7 @@ namespace TAPI
         Window* window
     );
 
+    TAPI_API void SetWindowSizeCallback(Window* window);
 
     // Window position
 
@@ -119,7 +120,7 @@ namespace TAPI
 
     TAPI_API bool InitGraphics(Window* window);
     TAPI_API void SetClearColor(Color color);
-    TAPI_API void Clear();
+    TAPI_API void ClearBuffers();
 
     // Fullscreen
 
@@ -134,15 +135,14 @@ namespace TAPI
 
     // V-Sync
 
-    void SetVSync(Window* window, bool enabled);
+    TAPI_API void SetVSync(Window* window, bool enabled);
 
     // Cursor
 
-    void ShowCursor(Window* window);
-    void HideCursor(Window* window);
+    TAPI_API void ShowCursor(Window* window);
+    TAPI_API void HideCursor(Window* window);
 
     // Frame Checks
 
-    TAPI_API void BeginFrame(Window* window);
-    TAPI_API void EndFrame(Window* window);
+    // TAPI_API void BeginFrame(Window* window);
 }

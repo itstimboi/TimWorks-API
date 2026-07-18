@@ -14,6 +14,17 @@ namespace TAPI
         {}
     };
 
+    struct Vector2Double
+    {
+        double x = 0.0;
+        double y = 0.0;
+
+        Vector2Double() = default;
+
+        Vector2Double(float x, float y)
+            : x(x), y(y)
+        {}
+    };
 
     struct Vector2Int
     {

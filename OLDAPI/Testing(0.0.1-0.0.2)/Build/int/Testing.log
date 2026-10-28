@@ -1,0 +1,9 @@
+﻿  main.cpp
+B:\WrapperAPI\Testing\include\TimAPI\TimAPI.h(9,14): warning C4273: 'TAPI::GetVersion': inconsistent dll linkage
+  (compiling source file 'main.cpp')
+      B:\WrapperAPI\Testing\include\TimAPI\Core\Window\Window.h(43,26):
+      see previous definition of 'TAPI::GetVersion'
+  
+  LINK : program database B:\WrapperAPI\Testing\Build\Testing.pdb missing; performing full link
+     Creating library .\Build\Testing.lib and object .\Build\Testing.exp
+  Testing.vcxproj -> B:\WrapperAPI\Testing\Build\Testing.exe

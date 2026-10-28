@@ -1,10 +1,9 @@
-<<<<<<< HEAD
 .vscode/
 
 *.exe
 
 *.txt
-=======
+
 .vs/
 Debug/
 Release/
@@ -26,4 +25,3 @@ glad.c
 *.idb
 *.user
 *.suo
->>>>>>> origin/main

@@ -5,6 +5,7 @@
 *.txt
 
 .vs/
+OLDAPI/.vs/
 Debug/
 Release/
 x64/
@@ -15,6 +16,7 @@ Release/
 
 glad.c
 
+*.slnx
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user

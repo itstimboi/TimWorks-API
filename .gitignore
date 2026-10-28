@@ -5,6 +5,7 @@
 *.txt
 
 .vs/
+**/.vs/
 OLDAPI/
 Debug/
 Release/

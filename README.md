@@ -1,4 +1,5 @@
 # TimWorks API
+> Previously known as **TimAPI**
 
 TimWorks API is a windowing, audio, and input API I made for TimWorks Engine.
 
@@ -12,7 +13,7 @@ Added Audio Support.
 Added Framebuffers.
 
 
-> Previously known as **TimAPI**
+# OLD DESCRIPTION
 
 > TimAPI is a wrapper API I decided to make for OpenGL®.
 

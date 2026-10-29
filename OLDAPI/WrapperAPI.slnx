@@ -1,8 +1,0 @@
-<Solution>
-  <Configurations>
-    <Platform Name="x64" />
-    <Platform Name="x86" />
-  </Configurations>
-  <Project Path="API/API.vcxproj" Id="aae4ac9c-24f1-42f0-b42d-a63ab934c86e" />
-  <Project Path="Test(0.0.3)/Test.vcxproj" Id="d0a49c71-0368-43b1-a533-f134f08a0674" />
-</Solution>

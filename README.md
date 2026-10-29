@@ -1,6 +1,6 @@
 # TimWorks API
 
-This is an API I made for TimWorks Engine
+This is an API I made specifically for TimWorks Engine.
 
 # Code Examples
 

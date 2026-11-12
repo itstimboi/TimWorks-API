@@ -2,12 +2,11 @@
 #define TW_FRAMEBUFFER_H
 
 #include <stdint.h>
+#include "TW_window.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct TWAPI_Window TWAPI_Window;
 
 typedef struct TWAPI_Framebuffer {
     int width;
@@ -51,8 +50,6 @@ int TWAPI_Present(
     const TWAPI_Window* window,
     const TWAPI_Framebuffer* framebuffer
 );
-
-typedef struct TWAPI_Window TWAPI_Window;
 
 #ifdef __cplusplus
 }

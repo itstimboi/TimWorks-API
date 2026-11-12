@@ -72,11 +72,23 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
     int requestedSamples,
     PIXELFORMATDESCRIPTOR* outputPFD)
 {
+    int existing;
+    HINSTANCE instance;
+    const char* className;
+    WNDCLASSA wc;
+    HWND dummy;
+    HDC dummyDC;
+    PIXELFORMATDESCRIPTOR dummyPFD;
+    int dummyFormat;
+    HGLRC dummyContext;
+    PROC proc;
+    TWAPI_WGLChoosePixelFormatARB chooseARB = NULL;
+    int chosenFormat;
+
     if (!targetDC || !outputPFD)
         return 0;
 
-    /* If a pixel format is already set, Windows cannot replace it. */
-    int existing = GetPixelFormat(targetDC);
+    existing = GetPixelFormat(targetDC);
 
     if (existing != 0)
     {
@@ -84,12 +96,11 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
             targetDC, existing, sizeof(*outputPFD), outputPFD);
         return existing;
     }
-
-    HINSTANCE instance = GetModuleHandleA(NULL);
-
-    const char* className = "TWAPI_WGL_Bootstrap_Class";
-
-    WNDCLASSA wc;
+    
+    instance = GetModuleHandleA(NULL);
+    
+    className = "TWAPI_WGL_Bootstrap_Class";
+    
     ZeroMemory(&wc, sizeof(wc));
 
     wc.style = CS_OWNDC;
@@ -103,7 +114,7 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
         return 0;
     }
 
-    HWND dummy = CreateWindowExA(
+    dummy = CreateWindowExA(
         0, className, "",
         WS_POPUP,
         0, 0, 1, 1,
@@ -112,7 +123,7 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
     if (!dummy)
         return 0;
 
-    HDC dummyDC = GetDC(dummy);
+    dummyDC = GetDC(dummy);
 
     if (!dummyDC)
     {
@@ -120,7 +131,6 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
         return 0;
     }
 
-    PIXELFORMATDESCRIPTOR dummyPFD;
     ZeroMemory(&dummyPFD, sizeof(dummyPFD));
 
     dummyPFD.nSize = sizeof(dummyPFD);
@@ -136,7 +146,7 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
     dummyPFD.cStencilBits = 8;
     dummyPFD.iLayerType = PFD_MAIN_PLANE;
 
-    int dummyFormat = ChoosePixelFormat(dummyDC, &dummyPFD);
+    dummyFormat = ChoosePixelFormat(dummyDC, &dummyPFD);
 
     if (!dummyFormat ||
         !SetPixelFormat(dummyDC, dummyFormat, &dummyPFD))
@@ -146,7 +156,7 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
         return 0;
     }
 
-    HGLRC dummyContext = wglCreateContext(dummyDC);
+    dummyContext = wglCreateContext(dummyDC);
 
     if (!dummyContext ||
         !wglMakeCurrent(dummyDC, dummyContext))
@@ -159,30 +169,53 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
         return 0;
     }
 
-    PROC proc = TWAPI_Win32_LoadWGLProc(
+    proc = TWAPI_Win32_LoadWGLProc(
         "wglChoosePixelFormatARB");
-
-    TWAPI_WGLChoosePixelFormatARB chooseARB = NULL;
 
     if (proc)
         memcpy(&chooseARB, &proc, sizeof(chooseARB));
 
-    int chosenFormat = 0;
+    chosenFormat = 0;
 
     if (chooseARB)
     {
         int samplesToTry[] = {8, 4, 2, 0};
         int count = sizeof(samplesToTry) / sizeof(samplesToTry[0]);
 
-        for (int i = 0; i < count; ++i)
+        int i;
+
+        for (i = 0; i < count; ++i)
         {
             int samples = samplesToTry[i];
+            int attributes[22];
+            UINT formatsFound;
 
             if (samples > requestedSamples)
                 continue;
 
-            int attributes[] = {
-                WGL_DRAW_TO_WINDOW_ARB,  TRUE,
+            attributes[0] = WGL_DRAW_TO_WINDOW_ARB;
+            attributes[1] = TRUE;
+            attributes[2] = WGL_SUPPORT_OPENGL_ARB;
+            attributes[3] = TRUE;
+            attributes[4] = WGL_DOUBLE_BUFFER_ARB;
+            attributes[5] = TRUE;
+            attributes[6] = WGL_PIXEL_TYPE_ARB;
+            attributes[7] = WGL_TYPE_RGBA_ARB;
+            attributes[8] = WGL_COLOR_BITS_ARB;
+            attributes[9] = 32;
+            attributes[10] = WGL_ALPHA_BITS_ARB;
+            attributes[11] = 8;
+            attributes[12] = WGL_DEPTH_BITS_ARB;
+            attributes[13] = 24;
+            attributes[14] = WGL_STENCIL_BITS_ARB;
+            attributes[15] = 8;
+            attributes[16] = WGL_SAMPLE_BUFFERS_ARB;
+            attributes[17] = samples > 0 ? 1 : 0;
+            attributes[18] = WGL_SAMPLES_ARB;
+            attributes[19] = samples;
+            attributes[20] = 0;
+            attributes[21] = 0;
+                /* WGL_DRAW_TO_WINDOW_ARB,  TRUE,
                 WGL_SUPPORT_OPENGL_ARB,  TRUE,
                 WGL_DOUBLE_BUFFER_ARB,   TRUE,
                 WGL_PIXEL_TYPE_ARB,      WGL_TYPE_RGBA_ARB,
@@ -192,10 +225,9 @@ static int TWAPI_Win32_ChoosePixelFormatMSAA(
                 WGL_STENCIL_BITS_ARB,    8,
                 WGL_SAMPLE_BUFFERS_ARB,  samples > 0 ? 1 : 0,
                 WGL_SAMPLES_ARB,         samples,
-                0, 0
-            };
+                0, 0 */
 
-            UINT formatsFound = 0;
+            formatsFound = 0;
 
             if (chooseARB(
                     targetDC,
@@ -459,15 +491,16 @@ static LRESULT CALLBACK TWAPI_Win32_WindowProc(
 
 int TWAPI_Win32_Init(void)
 {
+    HINSTANCE instance = GetModuleHandleA(NULL);
+    WNDCLASSEXA windowClass;
+    ATOM atom;
+
     if (TWAPI_Win32_WindowClassAtom != 0)
         return 1;
-
-    HINSTANCE instance = GetModuleHandleA(NULL);
 
     if (!instance)
         return 0;
 
-    WNDCLASSEXA windowClass;
     memset(&windowClass, 0, sizeof(windowClass));
 
     windowClass.cbSize = sizeof(windowClass);
@@ -487,7 +520,7 @@ int TWAPI_Win32_Init(void)
     windowClass.lpszClassName =
         TWAPI_WIN32_CLASS_NAME;
 
-    ATOM atom = RegisterClassExA(&windowClass);
+    atom = RegisterClassExA(&windowClass);
 
     if (!atom)
     {
@@ -513,14 +546,18 @@ int TWAPI_Win32_Init(void)
 void* TWAPI_Win32_CreateWindow(
     TWAPI_Window* window)
 {
+    DWORD style;
+    DWORD extendedStyle = 0;
+    RECT rect;
+    int outerWidth;
+    int outerHeight;
+    HWND hwnd;
+
     if (!window)
         return NULL;
 
     if (!TWAPI_Win32_Init())
         return NULL;
-
-    DWORD style;
-    DWORD extendedStyle = 0;
 
     if (window->fullscreen)
     {
@@ -543,7 +580,6 @@ void* TWAPI_Win32_CreateWindow(
         }
     }
 
-    RECT rect;
     rect.left = 0;
     rect.top = 0;
     rect.right = window->width;
@@ -562,10 +598,10 @@ void* TWAPI_Win32_CreateWindow(
         return NULL;
     }
 
-    int outerWidth = rect.right - rect.left;
-    int outerHeight = rect.bottom - rect.top;
+    outerWidth = rect.right - rect.left;
+    outerHeight = rect.bottom - rect.top;
 
-    HWND hwnd = CreateWindowExA(
+    hwnd = CreateWindowExA(
         extendedStyle,
         TWAPI_WIN32_CLASS_NAME,
         window->title,
@@ -597,12 +633,12 @@ void* TWAPI_Win32_CreateWindow(
 
 void TWAPI_Win32_DestroyWindow(TWAPI_Window* window)
 {
+    HWND hwnd = (HWND)window->nativeHandle;
+    
     if (!window)
         return;
 
     TWAPI_Win32_DestroyPresentBuffer(window);
-
-    HWND hwnd = (HWND)window->nativeHandle;
 
     if (hwnd && IsWindow(hwnd))
         DestroyWindow(hwnd);
@@ -617,6 +653,7 @@ void TWAPI_Win32_DestroyWindow(TWAPI_Window* window)
 void TWAPI_Win32_PollEvents(void)
 {
     TWAPI_Window* window = TWAPI_Win32_ActiveWindow;
+    MSG message;
 
     if (window) {
         memset(window->keysPressed, 0, sizeof(window->keysPressed));
@@ -624,8 +661,6 @@ void TWAPI_Win32_PollEvents(void)
         memset(window->mousePressed, 0, sizeof(window->mousePressed));
         memset(window->mouseReleased, 0, sizeof(window->mouseReleased));
     }
-
-    MSG message;
 
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
         if (message.message == WM_QUIT)
@@ -707,6 +742,12 @@ static void TWAPI_Win32_KeyDown(TWAPI_Window* window, WPARAM key)
         window->keysPressed[code] = 1;
 
     window->keysDown[code] = 1;
+
+    printf(
+        "[KEY DOWN] Window: %p | Key: %d\n",
+        (void*)window,
+        code
+    );
 }
 
 static void TWAPI_Win32_KeyUp(TWAPI_Window* window, WPARAM key)
@@ -721,6 +762,12 @@ static void TWAPI_Win32_KeyUp(TWAPI_Window* window, WPARAM key)
         window->keysReleased[code] = 1;
 
     window->keysDown[code] = 0;
+
+    printf(
+    "[KEY UP] Window: %p | Key: %d\n",
+    (void*)window,
+    code
+);
 }
 
 static void TWAPI_Win32_MouseDown(
@@ -751,12 +798,16 @@ static void TWAPI_Win32_MouseUp(
 static void TWAPI_Win32_DestroyPresentBuffer(
     TWAPI_Window* window)
 {
+    HDC memoryDC;
+    HBITMAP bitmap;
+    HBITMAP oldBitmap;
+
     if (!window)
         return;
 
-    HDC memoryDC = (HDC)window->presentDC;
-    HBITMAP bitmap = (HBITMAP)window->presentBitmap;
-    HBITMAP oldBitmap = (HBITMAP)window->presentOldBitmap;
+    memoryDC = (HDC)window->presentDC;
+    bitmap = (HBITMAP)window->presentBitmap;
+    oldBitmap = (HBITMAP)window->presentOldBitmap;
 
     if (memoryDC) {
         if (oldBitmap)
@@ -781,6 +832,10 @@ static int TWAPI_Win32_EnsurePresentBuffer(
     int width,
     int height)
 {
+    HDC memoryDC;
+    HBITMAP bitmap;
+    HGDIOBJ oldBitmap;
+
     if (window->presentDC &&
         window->presentBitmap &&
         window->presentWidth == width &&
@@ -789,11 +844,11 @@ static int TWAPI_Win32_EnsurePresentBuffer(
 
     TWAPI_Win32_DestroyPresentBuffer(window);
 
-    HDC memoryDC = CreateCompatibleDC(windowDC);
+    memoryDC = CreateCompatibleDC(windowDC);
     if (!memoryDC)
         return 0;
 
-    HBITMAP bitmap =
+    bitmap =
         CreateCompatibleBitmap(windowDC, width, height);
 
     if (!bitmap) {
@@ -801,7 +856,7 @@ static int TWAPI_Win32_EnsurePresentBuffer(
         return 0;
     }
 
-    HGDIOBJ oldBitmap = SelectObject(memoryDC, bitmap);
+    oldBitmap = SelectObject(memoryDC, bitmap);
 
     if (!oldBitmap || oldBitmap == HGDI_ERROR) {
         DeleteObject(bitmap);
@@ -822,6 +877,24 @@ int TWAPI_Win32_Present(
     const TWAPI_Window* constWindow,
     const TWAPI_Framebuffer* framebuffer)
 {
+    TWAPI_Window* window;
+    RECT client;
+    HWND hwnd;
+    int clientWidth;
+    int clientHeight;
+    HDC windowDC;
+    HDC memoryDC;
+    double sx;
+    double sy;
+    double scale;
+    int drawWidth;
+    int drawHeight;
+    int drawX;
+    int drawY;
+    BITMAPINFO info;
+    int result;
+    int success;
+
     if (!constWindow || !framebuffer ||
         !framebuffer->pixels ||
         framebuffer->width <= 0 ||
@@ -830,25 +903,23 @@ int TWAPI_Win32_Present(
         return 0;
 
     /* The cache is owned by the window, so this function updates it. */
-    TWAPI_Window* window = (TWAPI_Window*)constWindow;
+    window = (TWAPI_Window*)constWindow;
 
-    HWND hwnd = (HWND)window->nativeHandle;
+    hwnd = (HWND)window->nativeHandle;
 
     if (!hwnd || !IsWindow(hwnd))
         return 0;
 
-    RECT client;
-
     if (!GetClientRect(hwnd, &client))
         return 0;
 
-    int clientWidth = client.right - client.left;
-    int clientHeight = client.bottom - client.top;
+    clientWidth = client.right - client.left;
+    clientHeight = client.bottom - client.top;
 
     if (clientWidth <= 0 || clientHeight <= 0)
         return 1;
 
-    HDC windowDC = GetDC(hwnd);
+    windowDC = GetDC(hwnd);
 
     if (!windowDC)
         return 0;
@@ -859,26 +930,25 @@ int TWAPI_Win32_Present(
         return 0;
     }
 
-    HDC memoryDC = (HDC)window->presentDC;
+    memoryDC = (HDC)window->presentDC;
 
     /* Draw the entire frame off-screen first. */
     PatBlt(memoryDC, 0, 0,
            clientWidth, clientHeight, BLACKNESS);
 
-    double sx = (double)clientWidth / framebuffer->width;
-    double sy = (double)clientHeight / framebuffer->height;
-    double scale = sx < sy ? sx : sy;
+    sx = (double)clientWidth / framebuffer->width;
+    sy = (double)clientHeight / framebuffer->height;
+    scale = sx < sy ? sx : sy;
 
-    int drawWidth = (int)(framebuffer->width * scale);
-    int drawHeight = (int)(framebuffer->height * scale);
+    drawWidth = (int)(framebuffer->width * scale);
+    drawHeight = (int)(framebuffer->height * scale);
 
     if (drawWidth < 1) drawWidth = 1;
     if (drawHeight < 1) drawHeight = 1;
 
-    int drawX = (clientWidth - drawWidth) / 2;
-    int drawY = (clientHeight - drawHeight) / 2;
+    drawX = (clientWidth - drawWidth) / 2;
+    drawY = (clientHeight - drawHeight) / 2;
 
-    BITMAPINFO info;
     ZeroMemory(&info, sizeof(info));
 
     info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -898,7 +968,7 @@ int TWAPI_Win32_Present(
         return 0;
     }
 
-    int result = StretchDIBits(
+    result = StretchDIBits(
         memoryDC,
         drawX, drawY, drawWidth, drawHeight,
         0, 0, framebuffer->width, framebuffer->height,
@@ -908,7 +978,7 @@ int TWAPI_Win32_Present(
         SRCCOPY
     );
 
-    int success = result != (int)GDI_ERROR;
+    success = result != (int)GDI_ERROR;
 
     if (success) {
         success = BitBlt(
@@ -924,24 +994,29 @@ int TWAPI_Win32_Present(
     return success;
 }
 
-
-#include <glad/gl10.h>
+/* #include <glad/gl10.h> */
 
 int TWAPI_Win32_CreateOpenGLContext(TWAPI_Window* window)
 {
+    HWND hwnd;
+    HDC dc;
+    PIXELFORMATDESCRIPTOR pfd;
+    int format;
+    HGLRC context;
+    int success;
+
     if (!window || !window->nativeHandle)
         return 0;
 
     if (window->nativeContext)
         return 1;
 
-    HWND hwnd = (HWND)window->nativeHandle;
-    HDC dc = GetDC(hwnd);
+    hwnd = (HWND)window->nativeHandle;
+    dc = GetDC(hwnd);
 
     if (!dc)
         return 0;
 
-    PIXELFORMATDESCRIPTOR pfd;
     ZeroMemory(&pfd, sizeof(pfd));
 
     pfd.nSize = sizeof(pfd);
@@ -957,7 +1032,7 @@ int TWAPI_Win32_CreateOpenGLContext(TWAPI_Window* window)
     pfd.cStencilBits = 8;
     pfd.iLayerType = PFD_MAIN_PLANE;
 
-    int format = GetPixelFormat(dc);
+    format = GetPixelFormat(dc);
 
     if (format == 0) {
         format = ChoosePixelFormat(dc, &pfd);
@@ -968,7 +1043,7 @@ int TWAPI_Win32_CreateOpenGLContext(TWAPI_Window* window)
         }
     }
 
-    HGLRC context = wglCreateContext(dc);
+    context = wglCreateContext(dc);
 
     if (!context) {
         ReleaseDC(hwnd, dc);
@@ -977,7 +1052,7 @@ int TWAPI_Win32_CreateOpenGLContext(TWAPI_Window* window)
 
     window->nativeContext = (void*)context;
 
-    int success = wglMakeCurrent(dc, context) != 0;
+    success = wglMakeCurrent(dc, context) != 0;
 
     if (!success) {
         wglDeleteContext(context);
@@ -990,10 +1065,12 @@ int TWAPI_Win32_CreateOpenGLContext(TWAPI_Window* window)
 
 void TWAPI_Win32_DestroyOpenGLContext(TWAPI_Window* window)
 {
+    HGLRC context;
+
     if (!window || !window->nativeContext)
         return;
 
-    HGLRC context = (HGLRC)window->nativeContext;
+    context = (HGLRC)window->nativeContext;
 
     if (wglGetCurrentContext() == context)
         wglMakeCurrent(NULL, NULL);
@@ -1004,6 +1081,11 @@ void TWAPI_Win32_DestroyOpenGLContext(TWAPI_Window* window)
 
 int TWAPI_Win32_MakeOpenGLCurrent(TWAPI_Window* window)
 {
+    HWND hwnd;
+    HGLRC context;
+    HDC dc;
+    int pixelFormat;
+
     if (!window)
     {
         fprintf(stderr, "[TimAPI GL] Window is NULL.\n");
@@ -1022,10 +1104,10 @@ int TWAPI_Win32_MakeOpenGLCurrent(TWAPI_Window* window)
         return 0;
     }
 
-    HWND hwnd = (HWND)window->nativeHandle;
-    HGLRC context = (HGLRC)window->nativeContext;
+    hwnd = (HWND)window->nativeHandle;
+    context = (HGLRC)window->nativeContext;
 
-    HDC dc = GetDC(hwnd);
+    dc = GetDC(hwnd);
 
     if (!dc)
     {
@@ -1035,7 +1117,7 @@ int TWAPI_Win32_MakeOpenGLCurrent(TWAPI_Window* window)
         return 0;
     }
 
-    int pixelFormat = GetPixelFormat(dc);
+    pixelFormat = GetPixelFormat(dc);
 
     if (pixelFormat == 0)
     {
@@ -1077,17 +1159,21 @@ int TWAPI_Win32_MakeOpenGLCurrent(TWAPI_Window* window)
 
 int TWAPI_Win32_SwapOpenGLBuffers(TWAPI_Window* window)
 {
+    HWND hwnd;
+    HDC dc;
+    int success;
+
     if (!window || !window->nativeHandle ||
         !window->nativeContext)
         return 0;
 
-    HWND hwnd = (HWND)window->nativeHandle;
-    HDC dc = GetDC(hwnd);
+    hwnd = (HWND)window->nativeHandle;
+    dc = GetDC(hwnd);
 
     if (!dc)
         return 0;
 
-    int success = SwapBuffers(dc) != 0;
+    success = SwapBuffers(dc) != 0;
 
     ReleaseDC(hwnd, dc);
     return success;
@@ -1095,10 +1181,13 @@ int TWAPI_Win32_SwapOpenGLBuffers(TWAPI_Window* window)
 
 TWAPI_GLProc TWAPI_Win32_GetOpenGLProcAddress(const char* name)
 {
+    PROC proc;
+    HMODULE module;
+
     if (!name)
         return NULL;
 
-    PROC proc = wglGetProcAddress(name);
+    proc = wglGetProcAddress(name);
 
     if (proc &&
         proc != (PROC)1 &&
@@ -1107,7 +1196,7 @@ TWAPI_GLProc TWAPI_Win32_GetOpenGLProcAddress(const char* name)
         proc != (PROC)-1)
         return (TWAPI_GLProc)proc;
 
-    HMODULE module = GetModuleHandleA("opengl32.dll");
+    module = GetModuleHandleA("opengl32.dll");
 
     if (!module)
         module = LoadLibraryA("opengl32.dll");
@@ -1171,6 +1260,17 @@ int TWAPI_Win32_CreateOpenGLContextEx(
     TWAPI_Window* window,
     const TWAPI_OpenGLContextConfig* config)
 {
+    HWND hwnd;
+    HDC dc;
+    PIXELFORMATDESCRIPTOR pfd;
+    int pixelFormat;
+    HGLRC bootstrap;
+    PROC proc;
+    TWAPI_WGLCreateContextAttribsARB createAttribs;
+    int attributes[9];
+    int i = 0;
+    HGLRC context;
+
     if (!window || !window->nativeHandle || !config)
         return 0;
 
@@ -1188,6 +1288,7 @@ int TWAPI_Win32_CreateOpenGLContextEx(
         return 0;
 
     if (config->majorVersion < 3 &&
+        config->minorVersion &&
         config->profile != TWAPI_OPENGL_PROFILE_DEFAULT)
         return 0;
 
@@ -1196,8 +1297,8 @@ int TWAPI_Win32_CreateOpenGLContextEx(
         config->profile != TWAPI_OPENGL_PROFILE_DEFAULT)
         return 0;
 
-    HWND hwnd = (HWND)window->nativeHandle;
-    HDC dc = GetDC(hwnd);
+    hwnd = (HWND)window->nativeHandle;
+    dc = GetDC(hwnd);
 
     if (!dc)
         return 0;
@@ -1212,10 +1313,9 @@ int TWAPI_Win32_CreateOpenGLContextEx(
         return 0;
     }
 
-    PIXELFORMATDESCRIPTOR pfd;
     ZeroMemory(&pfd, sizeof(pfd));
 
-    int pixelFormat = TWAPI_Win32_ChoosePixelFormatMSAA(
+    pixelFormat = TWAPI_Win32_ChoosePixelFormatMSAA(
         dc,
         config->samples,
         &pfd);
@@ -1271,9 +1371,12 @@ int TWAPI_Win32_CreateOpenGLContextEx(
         config->profile == TWAPI_OPENGL_PROFILE_DEFAULT &&
         config->debug == 0)
     {
+        int format;
+        HGLRC context;
+
         fprintf(stderr, "[TimAPI GL] Creating legacy context...\n");
 
-        int format = GetPixelFormat(dc);
+        format = GetPixelFormat(dc);
         fprintf(stderr, "[TimAPI GL] Pixel format: %d\n", format);
 
         if (format == 0)
@@ -1284,7 +1387,7 @@ int TWAPI_Win32_CreateOpenGLContextEx(
             return 0;
         }
 
-        HGLRC context = wglCreateContext(dc);
+        context = wglCreateContext(dc);
 
         if (!context)
         {
@@ -1321,7 +1424,7 @@ int TWAPI_Win32_CreateOpenGLContextEx(
        Create a temporary legacy context so we can load
        wglCreateContextAttribsARB.
     */
-    HGLRC bootstrap = wglCreateContext(dc);
+    bootstrap = wglCreateContext(dc);
 
     if (!bootstrap) {
         ReleaseDC(hwnd, dc);
@@ -1334,10 +1437,10 @@ int TWAPI_Win32_CreateOpenGLContextEx(
         return 0;
     }
 
-    PROC proc = TWAPI_Win32_GetWGLProcAddress(
+    proc = TWAPI_Win32_GetWGLProcAddress(
         "wglCreateContextAttribsARB");
 
-    TWAPI_WGLCreateContextAttribsARB createAttribs = NULL;
+    createAttribs = NULL;
 
     if (proc != NULL)
     {
@@ -1361,9 +1464,6 @@ int TWAPI_Win32_CreateOpenGLContextEx(
         ReleaseDC(hwnd, dc);
         return 0;
     }
-
-    int attributes[9];
-    int i = 0;
 
     attributes[i++] = WGL_CONTEXT_MAJOR_VERSION_ARB;
     attributes[i++] = config->majorVersion;
@@ -1390,7 +1490,7 @@ int TWAPI_Win32_CreateOpenGLContextEx(
 
     attributes[i++] = 0;
 
-    HGLRC context = createAttribs(dc, NULL, attributes);
+    context = createAttribs(dc, NULL, attributes);
 
     if (!context) {
         wglMakeCurrent(NULL, NULL);
@@ -1423,7 +1523,7 @@ int TWAPI_Win32_CreateOpenGLContextEx(
     return 1;
 }
 
-// int TWAPI_Win32_MakeOpenGLCurrent(TWAPI_Window* window)
+/* // int TWAPI_Win32_MakeOpenGLCurrent(TWAPI_Window* window)
 // {
 //     if (!window || !window->nativeHandle || !window->nativeContext)
 //         return 0;
@@ -1440,16 +1540,17 @@ int TWAPI_Win32_CreateOpenGLContextEx(
 //     ReleaseDC(hwnd, dc);
 
 //     return success;
-// }
+// } */
 
 int TWAPI_Win32_SetFullscreen(
     TWAPI_Window* window,
     int fullscreen)
 {
+    HWND hwnd;
     if (!window || !window->nativeHandle)
         return 0;
 
-    HWND hwnd = (HWND)window->nativeHandle;
+    hwnd = (HWND)window->nativeHandle;
     fullscreen = fullscreen != 0;
 
     if (window->fullscreen == fullscreen)
@@ -1459,6 +1560,8 @@ int TWAPI_Win32_SetFullscreen(
     {
         /* Save the original window position and dimensions. */
         RECT rect;
+        int width;
+        int height;
 
         if (!GetWindowRect(hwnd, &rect))
             return 0;
@@ -1481,8 +1584,8 @@ int TWAPI_Win32_SetFullscreen(
             WS_POPUP | WS_VISIBLE);
 
         /* Cover the primary monitor. */
-        int width = GetSystemMetrics(SM_CXSCREEN);
-        int height = GetSystemMetrics(SM_CYSCREEN);
+        width = GetSystemMetrics(SM_CXSCREEN);
+        height = GetSystemMetrics(SM_CYSCREEN);
 
         if (!SetWindowPos(
                 hwnd,
@@ -1537,6 +1640,13 @@ int TWAPI_Win32_SetVSync(
     TWAPI_Window* window,
     int enabled)
 {
+    HWND hwnd;
+    HDC dc;
+    HGLRC context;
+    PROC proc;
+    TWAPI_PFNWGLSWAPINTERVALEXT swapInterval = NULL;
+    BOOL success;
+
     if (!window ||
         !window->nativeHandle ||
         !window->nativeContext)
@@ -1544,13 +1654,13 @@ int TWAPI_Win32_SetVSync(
         return 0;
     }
 
-    HWND hwnd = (HWND)window->nativeHandle;
-    HDC dc = GetDC(hwnd);
+    hwnd = (HWND)window->nativeHandle;
+    dc = GetDC(hwnd);
 
     if (!dc)
         return 0;
-
-    HGLRC context = (HGLRC)window->nativeContext;
+    
+    context = (HGLRC)window->nativeContext;
 
     if (!wglMakeCurrent(dc, context))
     {
@@ -1558,10 +1668,8 @@ int TWAPI_Win32_SetVSync(
         return 0;
     }
 
-    PROC proc = wglGetProcAddress("wglSwapIntervalEXT");
-
-    TWAPI_PFNWGLSWAPINTERVALEXT swapInterval = NULL;
-
+    proc = wglGetProcAddress("wglSwapIntervalEXT");
+  
     if (proc != NULL &&
         proc != (PROC)1 &&
         proc != (PROC)2 &&
@@ -1581,7 +1689,7 @@ int TWAPI_Win32_SetVSync(
         return 0;
     }
 
-    BOOL success = swapInterval(enabled ? 1 : 0);
+    success = swapInterval(enabled ? 1 : 0);
 
     ReleaseDC(hwnd, dc);
     return success ? 1 : 0;

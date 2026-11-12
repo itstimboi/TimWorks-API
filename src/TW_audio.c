@@ -1,25 +1,23 @@
 
 #include <TWAPI/TW_audio.h>
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 #include <math.h>
-#include <limits.h>
 
 /*
     Enable OGG Vorbis decoding through stb_vorbis.
     Keep this include order.
 */
 #define STB_VORBIS_HEADER_ONLY
-#include "stb_vorbis.c"
+#include "stb_vorbis_c89_comments.c"
 
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
 #undef STB_VORBIS_HEADER_ONLY
-#include "stb_vorbis.c"
+#include "stb_vorbis_c89_comments.c"
+
 
 /* ---------------------------------------------------------
    Internal audio object
@@ -57,6 +55,7 @@ struct TWAPI_Audio
     struct TWAPI_Audio* next;
 };
 
+
 /* ---------------------------------------------------------
    Global engine state
    --------------------------------------------------------- */
@@ -75,31 +74,43 @@ static TWAPI_Vector3 g_listenerForward =
 static TWAPI_Vector3 g_listenerUp =
     { 0.0f, 1.0f, 0.0f };
 
+
 /* ---------------------------------------------------------
    Vector helpers
    --------------------------------------------------------- */
 
-static float tw_clamp(float value, float minimum, float maximum)
+static float tw_clamp(
+    float value,
+    float minimum,
+    float maximum)
 {
-    if (value < minimum) return minimum;
-    if (value > maximum) return maximum;
+    if (value < minimum)
+        return minimum;
+
+    if (value > maximum)
+        return maximum;
+
     return value;
 }
 
-static float tw_dot(TWAPI_Vector3 a, TWAPI_Vector3 b)
+static float tw_dot(
+    TWAPI_Vector3 a,
+    TWAPI_Vector3 b)
 {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
+    return a.x * b.x +
+           a.y * b.y +
+           a.z * b.z;
 }
 
 static TWAPI_Vector3 tw_sub(
     TWAPI_Vector3 a,
     TWAPI_Vector3 b)
 {
-    TWAPI_Vector3 result = {
-        a.x - b.x,
-        a.y - b.y,
-        a.z - b.z
-    };
+    TWAPI_Vector3 result;
+
+    result.x = a.x - b.x;
+    result.y = a.y - b.y;
+    result.z = a.z - b.z;
 
     return result;
 }
@@ -108,11 +119,11 @@ static TWAPI_Vector3 tw_scale(
     TWAPI_Vector3 v,
     float scale)
 {
-    TWAPI_Vector3 result = {
-        v.x * scale,
-        v.y * scale,
-        v.z * scale
-    };
+    TWAPI_Vector3 result;
+
+    result.x = v.x * scale;
+    result.y = v.y * scale;
+    result.z = v.z * scale;
 
     return result;
 }
@@ -121,28 +132,31 @@ static TWAPI_Vector3 tw_add(
     TWAPI_Vector3 a,
     TWAPI_Vector3 b)
 {
-    TWAPI_Vector3 result = {
-        a.x + b.x,
-        a.y + b.y,
-        a.z + b.z
-    };
+    TWAPI_Vector3 result;
+
+    result.x = a.x + b.x;
+    result.y = a.y + b.y;
+    result.z = a.z + b.z;
 
     return result;
 }
 
 static float tw_length(TWAPI_Vector3 v)
 {
-    return sqrtf(tw_dot(v, v));
+    return (float)sqrt((double)tw_dot(v, v));
 }
 
 static int tw_normalize(TWAPI_Vector3* v)
 {
-    float length = tw_length(*v);
+    float length;
+
+    length = tw_length(*v);
 
     if (length < 0.00001f)
         return 0;
 
     *v = tw_scale(*v, 1.0f / length);
+
     return 1;
 }
 
@@ -157,6 +171,7 @@ static TWAPI_Vector3 tw_lerp(
     );
 }
 
+
 /* ---------------------------------------------------------
    Object tracking
    --------------------------------------------------------- */
@@ -169,7 +184,9 @@ static void tw_register_audio(TWAPI_Audio* audio)
 
 static void tw_unregister_audio(TWAPI_Audio* audio)
 {
-    TWAPI_Audio** current = &g_audioList;
+    TWAPI_Audio** current;
+
+    current = &g_audioList;
 
     while (*current)
     {
@@ -183,14 +200,19 @@ static void tw_unregister_audio(TWAPI_Audio* audio)
     }
 }
 
+
 /* ---------------------------------------------------------
    Defaults and sound properties
    --------------------------------------------------------- */
 
 static TWAPI_Audio* tw_allocate_audio(void)
 {
-    TWAPI_Audio* audio =
-        (TWAPI_Audio*)calloc(1, sizeof(TWAPI_Audio));
+    TWAPI_Audio* audio;
+
+    audio = (TWAPI_Audio*)calloc(
+        1,
+        sizeof(TWAPI_Audio)
+    );
 
     if (!audio)
         return NULL;
@@ -202,14 +224,17 @@ static TWAPI_Audio* tw_allocate_audio(void)
     audio->spatialEnabled = 0;
     audio->spatialPositionInitialized = 0;
 
-    audio->targetPosition =
-        (TWAPI_Vector3){ 0.0f, 0.0f, 0.0f };
+    audio->targetPosition.x = 0.0f;
+    audio->targetPosition.y = 0.0f;
+    audio->targetPosition.z = 0.0f;
 
-    audio->currentPosition =
-        (TWAPI_Vector3){ 0.0f, 0.0f, 0.0f };
+    audio->currentPosition.x = 0.0f;
+    audio->currentPosition.y = 0.0f;
+    audio->currentPosition.z = 0.0f;
 
-    audio->velocity =
-        (TWAPI_Vector3){ 0.0f, 0.0f, 0.0f };
+    audio->velocity.x = 0.0f;
+    audio->velocity.y = 0.0f;
+    audio->velocity.z = 0.0f;
 
     audio->minDistance = 1.0f;
     audio->maxDistance = 20.0f;
@@ -223,10 +248,20 @@ static void tw_apply_basic_properties(TWAPI_Audio* audio)
     if (!audio || !audio->initialized)
         return;
 
-    ma_sound_set_volume(&audio->sound, audio->volume);
-    ma_sound_set_pan(&audio->sound, audio->pan);
-    ma_sound_set_looping(&audio->sound,
-        audio->looping ? MA_TRUE : MA_FALSE);
+    ma_sound_set_volume(
+        &audio->sound,
+        audio->volume
+    );
+
+    ma_sound_set_pan(
+        &audio->sound,
+        audio->pan
+    );
+
+    ma_sound_set_looping(
+        &audio->sound,
+        audio->looping ? MA_TRUE : MA_FALSE
+    );
 }
 
 static void tw_apply_spatial_properties(TWAPI_Audio* audio)
@@ -277,38 +312,50 @@ static void tw_apply_spatial_properties(TWAPI_Audio* audio)
     );
 }
 
+
 /* ---------------------------------------------------------
    Initialization and shutdown
    --------------------------------------------------------- */
 
 int TWAPI_AudioInit(void)
 {
+    ma_engine_config config;
+    ma_result result;
+
     if (g_audioInitialized)
         return 1;
 
-    ma_engine_config config = ma_engine_config_init();
+    config = ma_engine_config_init();
 
-    if (ma_engine_init(&config, &g_audioEngine) != MA_SUCCESS)
+    result = ma_engine_init(
+        &config,
+        &g_audioEngine
+    );
+
+    if (result != MA_SUCCESS)
         return 0;
 
     g_audioInitialized = 1;
 
     ma_engine_listener_set_position(
-        &g_audioEngine, 0,
+        &g_audioEngine,
+        0,
         g_listenerPosition.x,
         g_listenerPosition.y,
         g_listenerPosition.z
     );
 
     ma_engine_listener_set_direction(
-        &g_audioEngine, 0,
+        &g_audioEngine,
+        0,
         g_listenerForward.x,
         g_listenerForward.y,
         g_listenerForward.z
     );
 
     ma_engine_listener_set_world_up(
-        &g_audioEngine, 0,
+        &g_audioEngine,
+        0,
         g_listenerUp.x,
         g_listenerUp.y,
         g_listenerUp.z
@@ -330,21 +377,25 @@ void TWAPI_AudioShutdown(void)
     g_audioInitialized = 0;
 }
 
+
 /* ---------------------------------------------------------
    Loading from files
    --------------------------------------------------------- */
 
 TWAPI_Audio* TWAPI_LoadAudio(const char* filename)
 {
+    TWAPI_Audio* audio;
+    ma_result result;
+
     if (!g_audioInitialized || !filename || !filename[0])
         return NULL;
 
-    TWAPI_Audio* audio = tw_allocate_audio();
+    audio = tw_allocate_audio();
 
     if (!audio)
         return NULL;
 
-    ma_result result = ma_sound_init_from_file(
+    result = ma_sound_init_from_file(
         &g_audioEngine,
         filename,
         MA_SOUND_FLAG_DECODE,
@@ -376,6 +427,7 @@ TWAPI_Audio* TWAPI_LoadAudio(const char* filename)
     return audio;
 }
 
+
 /* ---------------------------------------------------------
    Loading from encoded memory
    --------------------------------------------------------- */
@@ -384,10 +436,13 @@ TWAPI_Audio* TWAPI_LoadAudioFromMemory(
     const void* bytes,
     size_t size)
 {
+    TWAPI_Audio* audio;
+    ma_result result;
+
     if (!g_audioInitialized || !bytes || size == 0)
         return NULL;
 
-    TWAPI_Audio* audio = tw_allocate_audio();
+    audio = tw_allocate_audio();
 
     if (!audio)
         return NULL;
@@ -400,10 +455,15 @@ TWAPI_Audio* TWAPI_LoadAudioFromMemory(
         return NULL;
     }
 
-    memcpy(audio->ownedData, bytes, size);
+    memcpy(
+        audio->ownedData,
+        bytes,
+        size
+    );
+
     audio->ownedDataSize = size;
 
-    ma_result result = ma_decoder_init_memory(
+    result = ma_decoder_init_memory(
         audio->ownedData,
         audio->ownedDataSize,
         NULL,
@@ -430,8 +490,10 @@ TWAPI_Audio* TWAPI_LoadAudioFromMemory(
     if (result != MA_SUCCESS)
     {
         ma_decoder_uninit(&audio->decoder);
+
         free(audio->ownedData);
         free(audio);
+
         return NULL;
     }
 
@@ -448,64 +510,93 @@ TWAPI_Audio* TWAPI_LoadAudioFromMemory(
     return audio;
 }
 
+
 /* ---------------------------------------------------------
    Base64 decoder
    --------------------------------------------------------- */
 
 static int tw_base64_value(unsigned char c)
 {
-    if (c >= 'A' && c <= 'Z') return c - 'A';
-    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
-    if (c >= '0' && c <= '9') return c - '0' + 52;
-    if (c == '+') return 62;
-    if (c == '/') return 63;
+    if (c >= 'A' && c <= 'Z')
+        return c - 'A';
+
+    if (c >= 'a' && c <= 'z')
+        return c - 'a' + 26;
+
+    if (c >= '0' && c <= '9')
+        return c - '0' + 52;
+
+    if (c == '+')
+        return 62;
+
+    if (c == '/')
+        return 63;
 
     return -1;
 }
 
 static int tw_is_base64_space(unsigned char c)
 {
-    return c == ' ' || c == '\t' ||
-           c == '\r' || c == '\n';
+    return c == ' ' ||
+           c == '\t' ||
+           c == '\r' ||
+           c == '\n';
 }
 
 static unsigned char* tw_decode_base64(
     const char* input,
     size_t* outputSize)
 {
+    size_t inputLength;
+    size_t capacity;
+    size_t out;
+    size_t i;
+
+    unsigned char* output;
+    unsigned char quartet[4];
+
+    int quartetCount;
+    int paddingSeen;
+    int decodedValue;
+
+    unsigned char c;
+    unsigned long value;
+
     if (!input || !outputSize)
         return NULL;
 
     *outputSize = 0;
 
-    size_t inputLength = strlen(input);
+    inputLength = strlen(input);
 
     if (inputLength == 0)
         return NULL;
 
-    if (inputLength > SIZE_MAX - 3)
+    if (inputLength > (size_t)-1 - 3)
         return NULL;
 
-    size_t capacity = ((inputLength + 3) / 4) * 3;
+    capacity = ((inputLength + 3) / 4);
+
+    if (capacity > (size_t)-1 / 3)
+        return NULL;
+
+    capacity *= 3;
 
     if (capacity == 0)
         return NULL;
 
-    unsigned char* output =
-        (unsigned char*)malloc(capacity);
+    output = (unsigned char*)malloc(capacity);
 
     if (!output)
         return NULL;
 
-    unsigned char quartet[4];
-    int quartetCount = 0;
-    int paddingSeen = 0;
+    quartetCount = 0;
+    paddingSeen = 0;
+    out = 0;
 
-    size_t out = 0;
-
-    for (size_t i = 0; i < inputLength; ++i)
+    for (i = 0; i < inputLength; ++i)
     {
-        unsigned char c = (unsigned char)input[i];
+        c = (unsigned char)input[i];
 
         if (tw_is_base64_space(c))
             continue;
@@ -523,45 +614,54 @@ static unsigned char* tw_decode_base64(
         }
         else
         {
-            int value = tw_base64_value(c);
+            decodedValue = tw_base64_value(c);
 
-            if (value < 0)
+            if (decodedValue < 0)
             {
                 free(output);
                 return NULL;
             }
 
             quartet[quartetCount++] =
-                (unsigned char)value;
+                (unsigned char)decodedValue;
         }
 
         if (quartetCount == 4)
         {
-            if (quartet[0] == 64 || quartet[1] == 64)
+            if (quartet[0] == 64 ||
+                quartet[1] == 64)
             {
                 free(output);
                 return NULL;
             }
 
-            if (quartet[2] == 64 && quartet[3] != 64)
+            if (quartet[2] == 64 &&
+                quartet[3] != 64)
             {
                 free(output);
                 return NULL;
             }
 
-            uint32_t value =
-                ((uint32_t)quartet[0] << 18) |
-                ((uint32_t)quartet[1] << 12) |
-                ((uint32_t)(quartet[2] & 63) << 6) |
-                (uint32_t)(quartet[3] & 63);
+            value =
+                ((unsigned long)quartet[0] << 18) |
+                ((unsigned long)quartet[1] << 12) |
+                ((unsigned long)(quartet[2] & 63) << 6) |
+                (unsigned long)(quartet[3] & 63);
 
-            output[out++] = (unsigned char)(value >> 16);
+            output[out++] =
+                (unsigned char)(value >> 16);
 
             if (quartet[2] != 64)
-                output[out++] = (unsigned char)(value >> 8);
+            {
+                output[out++] =
+                    (unsigned char)(value >> 8);
+            }
 
             if (quartet[3] != 64)
-                output[out++] = (unsigned char)value;
+            {
+                output[out++] =
+                    (unsigned char)value;
+            }
 
             quartetCount = 0;
         }
@@ -580,26 +680,36 @@ static unsigned char* tw_decode_base64(
     }
 
     *outputSize = out;
+
     return output;
 }
 
 TWAPI_Audio* TWAPI_LoadAudioFromBase64(const char* base64)
 {
-    size_t decodedSize = 0;
+    size_t decodedSize;
+    unsigned char* decoded;
+    TWAPI_Audio* audio;
 
-    unsigned char* decoded =
-        tw_decode_base64(base64, &decodedSize);
+    decodedSize = 0;
+
+    decoded = tw_decode_base64(
+        base64,
+        &decodedSize
+    );
 
     if (!decoded)
         return NULL;
 
-    TWAPI_Audio* audio =
-        TWAPI_LoadAudioFromMemory(decoded, decodedSize);
+    audio = TWAPI_LoadAudioFromMemory(
+        decoded,
+        decodedSize
+    );
 
     free(decoded);
 
     return audio;
 }
+
 
 /* ---------------------------------------------------------
    Releasing an audio object
@@ -616,20 +726,24 @@ void TWAPI_FreeAudio(TWAPI_Audio* audio)
     {
         ma_sound_stop(&audio->sound);
         ma_sound_uninit(&audio->sound);
+
         audio->initialized = 0;
     }
 
     if (audio->decoderInitialized)
     {
         ma_decoder_uninit(&audio->decoder);
+
         audio->decoderInitialized = 0;
     }
 
     free(audio->ownedData);
+
     audio->ownedData = NULL;
 
     free(audio);
 }
+
 
 /* ---------------------------------------------------------
    Playback controls
@@ -642,8 +756,9 @@ int TWAPI_PlayAudio(TWAPI_Audio* audio)
 
     ma_sound_stop(&audio->sound);
 
-    if (ma_sound_seek_to_pcm_frame(&audio->sound, 0)
-        != MA_SUCCESS)
+    if (ma_sound_seek_to_pcm_frame(
+            &audio->sound,
+            0) != MA_SUCCESS)
     {
         return 0;
     }
@@ -660,7 +775,11 @@ void TWAPI_StopAudio(TWAPI_Audio* audio)
         return;
 
     ma_sound_stop(&audio->sound);
-    ma_sound_seek_to_pcm_frame(&audio->sound, 0);
+
+    ma_sound_seek_to_pcm_frame(
+        &audio->sound,
+        0
+    );
 
     audio->paused = 0;
     audio->pausedFrame = 0;
@@ -668,22 +787,27 @@ void TWAPI_StopAudio(TWAPI_Audio* audio)
 
 void TWAPI_PauseAudio(TWAPI_Audio* audio)
 {
+    ma_uint64 cursor;
+
     if (!audio || !audio->initialized || audio->paused)
         return;
 
     if (!ma_sound_is_playing(&audio->sound))
         return;
 
-    ma_uint64 cursor = 0;
+    cursor = 0;
 
     if (ma_sound_get_cursor_in_pcm_frames(
-            &audio->sound, &cursor) != MA_SUCCESS)
+            &audio->sound,
+            &cursor) != MA_SUCCESS)
     {
         return;
     }
 
     audio->pausedFrame = cursor;
+
     ma_sound_stop(&audio->sound);
+
     audio->paused = 1;
 }
 
@@ -693,7 +817,8 @@ void TWAPI_ResumeAudio(TWAPI_Audio* audio)
         return;
 
     if (ma_sound_seek_to_pcm_frame(
-            &audio->sound, audio->pausedFrame) != MA_SUCCESS)
+            &audio->sound,
+            audio->pausedFrame) != MA_SUCCESS)
     {
         return;
     }
@@ -722,14 +847,18 @@ int TWAPI_RewindAudio(TWAPI_Audio* audio)
     audio->pausedFrame = 0;
 
     return ma_sound_seek_to_pcm_frame(
-        &audio->sound, 0) == MA_SUCCESS;
+        &audio->sound,
+        0) == MA_SUCCESS;
 }
+
 
 /* ---------------------------------------------------------
    Basic sound properties
    --------------------------------------------------------- */
 
-void TWAPI_SetAudioLooping(TWAPI_Audio* audio, int looping)
+void TWAPI_SetAudioLooping(
+    TWAPI_Audio* audio,
+    int looping)
 {
     if (!audio || !audio->initialized)
         return;
@@ -742,14 +871,23 @@ void TWAPI_SetAudioLooping(TWAPI_Audio* audio, int looping)
     );
 }
 
-void TWAPI_SetAudioVolume(TWAPI_Audio* audio, float volume)
+void TWAPI_SetAudioVolume(
+    TWAPI_Audio* audio,
+    float volume)
 {
     if (!audio || !audio->initialized)
         return;
 
-    audio->volume = tw_clamp(volume, 0.0f, 1.0f);
+    audio->volume = tw_clamp(
+        volume,
+        0.0f,
+        1.0f
+    );
 
-    ma_sound_set_volume(&audio->sound, audio->volume);
+    ma_sound_set_volume(
+        &audio->sound,
+        audio->volume
+    );
 }
 
 float TWAPI_GetAudioVolume(const TWAPI_Audio* audio)
@@ -757,20 +895,30 @@ float TWAPI_GetAudioVolume(const TWAPI_Audio* audio)
     return audio ? audio->volume : 0.0f;
 }
 
-void TWAPI_SetAudioPan(TWAPI_Audio* audio, float pan)
+void TWAPI_SetAudioPan(
+    TWAPI_Audio* audio,
+    float pan)
 {
     if (!audio || !audio->initialized)
         return;
 
-    audio->pan = tw_clamp(pan, -1.0f, 1.0f);
+    audio->pan = tw_clamp(
+        pan,
+        -1.0f,
+        1.0f
+    );
 
-    ma_sound_set_pan(&audio->sound, audio->pan);
+    ma_sound_set_pan(
+        &audio->sound,
+        audio->pan
+    );
 }
 
 float TWAPI_GetAudioPan(const TWAPI_Audio* audio)
 {
     return audio ? audio->pan : 0.0f;
 }
+
 
 /* ---------------------------------------------------------
    Listener position and orientation
@@ -790,7 +938,10 @@ void TWAPI_SetAudioListener(
     /*
         Make up perpendicular to forward.
     */
-    up = tw_sub(up, tw_scale(forward, tw_dot(up, forward)));
+    up = tw_sub(
+        up,
+        tw_scale(forward, tw_dot(up, forward))
+    );
 
     if (!tw_normalize(&up))
         return;
@@ -800,20 +951,30 @@ void TWAPI_SetAudioListener(
     g_listenerUp = up;
 
     ma_engine_listener_set_position(
-        &g_audioEngine, 0,
-        position.x, position.y, position.z
+        &g_audioEngine,
+        0,
+        position.x,
+        position.y,
+        position.z
     );
 
     ma_engine_listener_set_direction(
-        &g_audioEngine, 0,
-        forward.x, forward.y, forward.z
+        &g_audioEngine,
+        0,
+        forward.x,
+        forward.y,
+        forward.z
     );
 
     ma_engine_listener_set_world_up(
-        &g_audioEngine, 0,
-        up.x, up.y, up.z
+        &g_audioEngine,
+        0,
+        up.x,
+        up.y,
+        up.z
     );
 }
+
 
 /* ---------------------------------------------------------
    3D sound properties
@@ -891,7 +1052,11 @@ void TWAPI_SetAudioDopplerFactor(
     if (!audio || !audio->initialized)
         return;
 
-    audio->dopplerFactor = tw_clamp(factor, 0.0f, 10.0f);
+    audio->dopplerFactor = tw_clamp(
+        factor,
+        0.0f,
+        10.0f
+    );
 
     if (audio->spatialEnabled)
     {
@@ -920,12 +1085,18 @@ void TWAPI_DisableAudio3D(TWAPI_Audio* audio)
     tw_apply_basic_properties(audio);
 }
 
+
 /* ---------------------------------------------------------
    Smooth spatial updates
    --------------------------------------------------------- */
 
 void TWAPI_UpdateAudio(float deltaTime)
 {
+    const float smoothingSpeed = 14.0f;
+
+    float blend;
+    TWAPI_Audio* audio;
+
     if (!g_audioInitialized || deltaTime <= 0.0f)
         return;
 
@@ -933,17 +1104,22 @@ void TWAPI_UpdateAudio(float deltaTime)
         Exponential smoothing:
         higher speed = faster response.
     */
-    const float smoothingSpeed = 14.0f;
-
     if (deltaTime > 0.25f)
         deltaTime = 0.25f;
 
-    float blend =
-        1.0f - expf(-smoothingSpeed * deltaTime);
+    blend = (float)(
+        1.0 - exp(
+            -(double)smoothingSpeed * (double)deltaTime
+        )
+    );
 
-    blend = tw_clamp(blend, 0.0f, 1.0f);
+    blend = tw_clamp(
+        blend,
+        0.0f,
+        1.0f
+    );
 
-    for (TWAPI_Audio* audio = g_audioList;
+    for (audio = g_audioList;
          audio != NULL;
          audio = audio->next)
     {
@@ -969,12 +1145,20 @@ void TWAPI_UpdateAudio(float deltaTime)
     }
 }
 
+
+/* ---------------------------------------------------------
+   Streaming audio
+   --------------------------------------------------------- */
+
 TWAPI_Audio* TWAPI_LoadAudioStream(const char* filename)
 {
+    TWAPI_Audio* audio;
+    ma_result result;
+
     if (!g_audioInitialized || !filename || !filename[0])
         return NULL;
 
-    TWAPI_Audio* audio = tw_allocate_audio();
+    audio = tw_allocate_audio();
 
     if (!audio)
         return NULL;
@@ -983,7 +1167,7 @@ TWAPI_Audio* TWAPI_LoadAudioStream(const char* filename)
         MA_SOUND_FLAG_STREAM tells miniaudio to stream the
         file instead of loading the entire track into memory.
     */
-    ma_result result = ma_sound_init_from_file(
+    result = ma_sound_init_from_file(
         &g_audioEngine,
         filename,
         MA_SOUND_FLAG_STREAM,

@@ -7,10 +7,12 @@ extern "C" {
 
 #include "TW_audio.h"
 #include "TW_framebuffer.h"
+#include "TW_mutex.h"
 #include "TW_platform.h"
 #include "TW_window.h"
 
 int TWAPI_Init( void );
+void TWAPI_ShutDown( void );
 
 #ifdef __cplusplus
 }

@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TWAPI_Window* TWAPI_CreateWindow(
+/* // TWAPI_Window* TWAPI_CreateWindow(
 //     int x,
 //     int y,
 //     int width,
@@ -54,14 +54,14 @@
 
 // #else
 
-//     /* This target does not have a window backend yet. */
+//     This target does not have a window backend yet. 
 //     free(window);
 //     return NULL;
 
 // #endif
 
 //     return window;
-// }
+// } */
 
 TWAPI_Window* TWAPI_CreateWindow(
     int x,
@@ -261,6 +261,8 @@ int TWAPI_CreateOpenGLContextEx(
     TWAPI_Window* window,
     const TWAPI_OpenGLContextConfig* config)
 {
+    int result = 0;
+
     fprintf(stderr, "[TimAPI] CreateOpenGLContextEx called.\n");
 
     if (!window || !config) {
@@ -270,8 +272,8 @@ int TWAPI_CreateOpenGLContextEx(
 
 #if defined(TWAPI_PLATFORM_WIN32)
     fprintf(stderr, "[TimAPI] Calling Win32 backend.\n");
-
-    int result = TWAPI_Win32_CreateOpenGLContextEx(
+    
+    result = TWAPI_Win32_CreateOpenGLContextEx(
         window, config);
 
     fprintf(stderr, "[TimAPI] Win32 backend returned %d.\n", result);
@@ -309,13 +311,15 @@ void TWAPI_GetWindowSize(
 TWAPI_Window* TWAPI_CreateWindowEx(
     const TWAPI_WindowConfig* config)
 {
+    TWAPI_Window* window = NULL;
+
     if (!config)
         return NULL;
 
     if (config->width <= 0 || config->height <= 0)
         return NULL;
 
-    TWAPI_Window* window = (TWAPI_Window*)calloc(
+    window = (TWAPI_Window*)calloc(
         1,
         sizeof(TWAPI_Window)
     );
@@ -398,13 +402,16 @@ int TWAPI_RecreateOpenGLWindow(
     const TWAPI_OpenGLContextConfig* glConfig,
     int vsync)
 {
+    TWAPI_Window* oldWindow = NULL;
+    /* Create the replacement without disturbing the old window. */
+    TWAPI_Window* newWindow = NULL;
+
     if (!window || !*window || !windowConfig || !glConfig)
         return 0;
-
-    TWAPI_Window* oldWindow = *window;
-
-    /* Create the replacement without disturbing the old window. */
-    TWAPI_Window* newWindow = TWAPI_CreateWindowEx(windowConfig);
+      
+    oldWindow = *window;
+    
+    newWindow = TWAPI_CreateWindowEx(windowConfig);
 
     if (!newWindow)
         return 0;
